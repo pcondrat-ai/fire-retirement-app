@@ -1,159 +1,160 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retirement Samurai - FIRE Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body { background: radial-gradient(circle at top right, #1e293b, #0f172a); color: #f8fafc; font-family: 'Inter', sans-serif; min-height: 100vh; }
-        .glass { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); border-radius: 1.5rem; }
-        .chart-container { position: relative; height: 300px; width: 100%; }
-    </style>
-</head>
-<body class="p-6">
-    <div class="max-w-4xl mx-auto">
-        <div id="dashboard" class="hidden space-y-6">
-            <div class="glass p-8 text-center">
-                <h1 class="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent mb-2">Your Samurai Path</h1>
-                <p id="strategy-label" class="text-slate-400 uppercase tracking-widest text-xs mb-6">Moderate Strategy</p>
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div class="p-4 bg-slate-800/50 rounded-xl">
-                        <p class="text-slate-400 text-xs uppercase">FI Target</p>
-                        <p id="fi-target-value" class="text-2xl font-mono text-emerald-400">$0</p>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Retirement Samurai - FIRE Dashboard</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <style>
+            body { background: radial-gradient(circle at top right, #1e293b, #0f172a); color: #f8fafc; font-family: 'Inter', sans-serif; min-height: 100vh; }
+            .glass { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); border-radius: 1.5rem; }
+            .chart-container { position: relative; height: 300px; width: 100%; }
+        </style>
+    </head>
+    <body class="p-6">
+        <div class="max-w-4xl mx-auto">
+            <!-- Dashboard -->
+            <div id="dashboard" class="hidden space-y-6">
+                <div class="glass p-8 text-center">
+                    <h1 class="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent mb-2">Your Samurai Path</h1>
+                    <p id="strategy-label" class="text-slate-400 uppercase tracking-widest text-xs mb-6">Moderate Strategy</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="p-4 bg-slate-800/50 rounded-xl">
+                            <p class="text-slate-400 text-xs uppercase">FI Target</p>
+                            <p id="fi-target-value" class="text-2xl font-mono text-emerald-400">$0</p>
+                        </div>
+                        <div class="p-4 bg-slate-800/50 rounded-xl border-x border-slate-700">
+                            <p class="text-slate-400 text-xs uppercase">Years to Freedom</p>
+                            <p id="years-to-retirement" class="text-2xl font-mono text-cyan-400">0</p>
+                        </div>
+                        <div class="p-4 bg-slate-800/50 rounded-xl">
+                            <p class="text-slate-400 text-xs uppercase">Target Year</p>
+                            <p id="target-fi-date" class="text-2xl font-mono text-purple-400">20XX</p>
+                        </div>
                     </div>
-                    <div class="p-4 bg-slate-800/50 rounded-xl border-x border-slate-700">
-                        <p class="text-slate-400 text-xs uppercase">Years to Freedom</p>
-                        <p id="years-to-retirement" class="text-2xl font-mono text-cyan-400">0</p>
-                    </div>
-                    <div class="p-4 bg-slate-800/50 rounded-xl">
-                        <p class="text-slate-400 text-xs uppercase">Target Year</p>
-                        <p id="target-fi-date" class="text-2xl font-mono text-purple-400">20XX</p>
-                    </div>
-                </div>
-
-                <div class="chart-container">
-                    <canvas id="wealthChart"></canvas>
-                </div>
-                
-                <button onclick="clearData()" class="mt-8 text-xs text-slate-500 hover:text-red-400 transition-colors">Reset Samurai Data</button>
-            </div>
-        </div>
-
-        <div id="onboarding" class="glass max-w-lg mx-auto p-8 shadow-2xl mt-20">
-            <h2 class="text-xl font-bold mb-6">Onboarding Initialized...</h2>
-            <div id="chat-container" class="space-y-4 mb-6 h-64 overflow-y-auto pr-2"></div>
-            <div class="flex gap-2">
-                <input id="user-input" type="text" placeholder="Your answer..." class="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-                <button onclick="handleInput()" class="bg-emerald-500 px-6 py-2 rounded-xl font-bold hover:bg-emerald-600 transition-all">Go</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const allocationProfiles = { "Aggressive": 0.07, "Moderate": 0.05, "Conservative": 0.03 };
-        let onboardingData = JSON.parse(localStorage.getItem('samuraiData')) || {};
-        const questions = [
-            { key: "monthlyExpenses", text: "What is your monthly expense budget today?" },
-            { key: "currentSavings", text: "What is your current net worth / total savings?" },
-            { key: "monthlySavings", text: "How much do you save every month?" },
-            { key: "taxRate", text: "Estimated tax rate in retirement? (e.g. 15)" },
-            { key: "allocation", text: "Allocation? (Aggressive, Moderate, Conservative)" }
-        ];
-        let qIndex = 0;
-
-        window.onload = () => {
-            if (onboardingData.allocation) showDashboard();
-            else askNext();
-        };
-
-        function askNext() {
-            if (qIndex < questions.length) {
-                appendMsg(questions[qIndex].text, 'bot');
-            } else {
-                localStorage.setItem('samuraiData', JSON.stringify(onboardingData));
-                showDashboard();
-            }
-        }
-
-        function handleInput() {
-            const val = document.getElementById('user-input').value;
-            if (!val) return;
-            appendMsg(val, 'user');
-            onboardingData[questions[qIndex].key] = val;
-            document.getElementById('user-input').value = '';
-            qIndex++;
-            setTimeout(askNext, 500);
-        }
-
-        function appendMsg(txt, sender) {
-            const div = document.createElement('div');
-            div.className = sender === 'bot' ? 'bg-slate-700/50 p-3 rounded-lg text-sm max-w-[80%]' : 'bg-emerald-600 p-3 rounded-lg text-sm max-w-[80%] ml-auto text-right';
-            div.innerText = txt;
-            document.getElementById('chat-container').appendChild(div);
-            div.scrollIntoView();
-        }
-
-        function showDashboard() {
-            document.getElementById('onboarding').classList.add('hidden');
-            document.getElementById('dashboard').classList.remove('hidden');
-            
-            const tax = parseFloat(onboardingData.taxRate || 15) / 100;
-            const targetFI = (onboardingData.monthlyExpenses * 12 / (1 - tax)) * 25;
-            const r = allocationProfiles[onboardingData.allocation || "Moderate"] / 12;
-            const pmt = parseFloat(onboardingData.monthlySavings);
-            const pv = parseFloat(onboardingData.currentSavings);
-            
-            const months = Math.log((targetFI * r + pmt) / (pv * r + pmt)) / Math.log(1 + r);
-            const years = (months / 12).toFixed(1);
-            
-            document.getElementById('fi-target-value').innerText = `$${Math.round(targetFI).toLocaleString()}`;
-            document.getElementById('years-to-retirement').innerText = years;
-            document.getElementById('target-fi-date').innerText = new Date().getFullYear() + Math.ceil(parseFloat(years));
-            
-            renderChart(pv, pmt, r*12, targetFI);
-        }
-
-        function renderChart(pv, pmt, annualR, target) {
-            const labels = [];
-            const data = [];
-            let current = pv;
-            for (let i = 0; i <= 20; i++) {
-                labels.push("Year " + i);
-                data.push(current);
-                current = (current * (1 + annualR)) + (pmt * 12);
-            }
-
-            new Chart(document.getElementById('wealthChart'), {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Projected Wealth',
-                        data: data,
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }, {
-                        label: 'FIRE Target',
-                        data: Array(21).fill(target),
-                        borderColor: '#f43f5e',
-                        borderDash: [5, 5],
-                        pointRadius: 0
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-            });
-        }
-
-        function clearData() {
-            localStorage.removeItem('samuraiData');
-            location.reload();
-        }
-    </script>
-</body>
-</html>
     
+                    <div class="chart-container">
+                        <canvas id="wealthChart"></canvas>
+                    </div>
+                    
+                    <button onclick="clearData()" class="mt-8 text-xs text-slate-500 hover:text-red-400 transition-colors">Reset Samurai Data</button>
+                </div>
+            </div>
+    
+            <!-- Onboarding -->
+            <div id="onboarding" class="glass max-w-lg mx-auto p-8 shadow-2xl mt-20">
+                <h2 class="text-xl font-bold mb-6">Onboarding Initialized...</h2>
+                <div id="chat-container" class="space-y-4 mb-6 h-64 overflow-y-auto pr-2"></div>
+                <div class="flex gap-2">
+                    <input id="user-input" type="text" placeholder="Your answer..." class="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                    <button onclick="handleInput()" class="bg-emerald-500 px-6 py-2 rounded-xl font-bold hover:bg-emerald-600 transition-all">Go</button>
+                </div>
+            </div>
+        </div>
+    
+        <script>
+            const allocationProfiles = { "Aggressive": 0.07, "Moderate": 0.05, "Conservative": 0.03 };
+            let onboardingData = JSON.parse(localStorage.getItem('samuraiData')) || {};
+            const questions = [
+                { key: "monthlyExpenses", text: "What is your monthly expense budget today?" },
+                { key: "currentSavings", text: "What is your current net worth / total savings?" },
+                { key: "monthlySavings", text: "How much do you save every month?" },
+                { key: "taxRate", text: "Estimated tax rate in retirement? (e.g. 15)" },
+                { key: "allocation", text: "Allocation? (Aggressive, Moderate, Conservative)" }
+            ];
+            let qIndex = 0;
+    
+            window.onload = () => {
+                if (onboardingData.allocation) showDashboard();
+                else askNext();
+            };
+    
+            function askNext() {
+                if (qIndex < questions.length) {
+                    appendMsg(questions[qIndex].text, 'bot');
+                } else {
+                    localStorage.setItem('samuraiData', JSON.stringify(onboardingData));
+                    showDashboard();
+                }
+            }
+    
+            function handleInput() {
+                const val = document.getElementById('user-input').value;
+                if (!val) return;
+                appendMsg(val, 'user');
+                onboardingData[questions[qIndex].key] = val;
+                document.getElementById('user-input').value = '';
+                qIndex++;
+                setTimeout(askNext, 500);
+            }
+    
+            function appendMsg(txt, sender) {
+                const div = document.createElement('div');
+                div.className = sender === 'bot' ? 'bg-slate-700/50 p-3 rounded-lg text-sm max-w-[80%]' : 'bg-emerald-600 p-3 rounded-lg text-sm max-w-[80%] ml-auto text-right';
+                div.innerText = txt;
+                document.getElementById('chat-container').appendChild(div);
+                div.scrollIntoView();
+            }
+    
+            function showDashboard() {
+                document.getElementById('onboarding').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                
+                const tax = parseFloat(onboardingData.taxRate || 15) / 100;
+                const targetFI = (onboardingData.monthlyExpenses * 12 / (1 - tax)) * 25;
+                const r = allocationProfiles[onboardingData.allocation || "Moderate"] / 12;
+                const pmt = parseFloat(onboardingData.monthlySavings);
+                const pv = parseFloat(onboardingData.currentSavings);
+                
+                const months = Math.log((targetFI * r + pmt) / (pv * r + pmt)) / Math.log(1 + r);
+                const years = (months / 12).toFixed(1);
+                
+                document.getElementById('fi-target-value').innerText = `$${Math.round(targetFI).toLocaleString()}`;
+                document.getElementById('years-to-retirement').innerText = years;
+                document.getElementById('target-fi-date').innerText = new Date().getFullYear() + Math.ceil(parseFloat(years));
+                
+                renderChart(pv, pmt, r*12, targetFI);
+            }
+    
+            function renderChart(pv, pmt, annualR, target) {
+                const labels = [];
+                const data = [];
+                let current = pv;
+                for (let i = 0; i <= 20; i++) {
+                    labels.push("Year " + i);
+                    data.push(current);
+                    current = (current * (1 + annualR)) + (pmt * 12);
+                }
+    
+                new Chart(document.getElementById('wealthChart'), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Projected Wealth',
+                            data: data,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }, {
+                            label: 'FIRE Target',
+                            data: Array(21).fill(target),
+                            borderColor: '#f43f5e',
+                            borderDash: [5, 5],
+                            pointRadius: 0
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+            }
+    
+            function clearData() {
+                localStorage.removeItem('samuraiData');
+                location.reload();
+            }
+        </script>
+    </body>
+    </html>
