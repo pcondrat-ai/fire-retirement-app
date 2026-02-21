@@ -1,30 +1,69 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FIRE Plan - Modern Onboarding</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
-    </style>
-</head>
-<body class="flex items-center justify-center min-h-screen p-6">
-    <div class="glass max-w-lg w-full rounded-2xl p-8 shadow-2xl">
-        <h1 class="text-2xl font-bold mb-2 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">Retirement Samurai</h1>
-        <p class="text-slate-400 mb-8 text-sm">AI-Driven Financial Independence Planning</p>
-        
-        <div id="chat-container" class="space-y-4 mb-8 h-64 overflow-y-auto">
-            <div class="bg-slate-700/50 p-3 rounded-lg text-sm self-start max-w-[80%]">
-                Welcome. Let's slice through your financial future. To begin, what is your current monthly expense budget?
-            </div>
-        </div>
 
-        <div class="relative">
-            <input type="text" placeholder="Type your response..." class="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
-            <button class="absolute right-2 top-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-1 rounded-lg text-sm font-medium transition-colors">Send</button>
-        </div>
-    </div>
-</body>
-</html>
+    <script>
+      const questions = [
+        "What is your current monthly expense budget?",
+        "What is your estimated monthly retirement expense budget?",
+        "What is your current total invested portfolio value?",
+        "What is your target FIRE number (the total portfolio value you aim for)?",
+        "What is your expected average annual portfolio return after inflation?"
+      ];
+      let currentQuestionIndex = 0;
+      const userResponses = {};
+      const chatContainer = document.getElementById('chat-container');
+      const sendButton = document.querySelector('button');
+      const inputField = document.querySelector('input[type="text"]');
+    
+      function addMessage(sender, message) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('mb-2', 'p-2', 'rounded-lg', 'max-w-[80%]');
+        if (sender === 'user') {
+          messageDiv.classList.add('bg-emerald-600', 'text-white', 'self-end');
+        } else {
+          messageDiv.classList.add('bg-slate-700/50', 'self-start');
+        }
+        messageDiv.textContent = message;
+        chatContainer.appendChild(messageDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+    
+      function askQuestion() {
+        if (currentQuestionIndex < questions.length) {
+          addMessage('ai', questions[currentQuestionIndex]);
+        } else {
+          addMessage('ai', 'Calculating your FIRE path...');
+          // In a real app, you would now send userResponses to a backend or do calculations
+          console.log(userResponses);
+          inputField.disabled = true;
+          sendButton.disabled = true;
+        }
+      }
+    
+      function handleSend() {
+        const userMessage = inputField.value.trim();
+        if (userMessage) {
+          addMessage('user', userMessage);
+          userResponses[questions[currentQuestionIndex]] = userMessage;
+          inputField.value = '';
+          currentQuestionIndex++;
+          askQuestion();
+        }
+      }
+    
+      sendButton.addEventListener('click', handleSend);
+      inputField.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          handleSend();
+        }
+      });
+    
+      // Initial question is already in the HTML, so start with the second one if we were to dynamically add the first.
+      // But since the first is hardcoded, we'll start index at 0 to align with the array for response storage,
+      // and the first 'askQuestion' call after the first response will ask the second question.
+      // We don't call askQuestion() initially as the first question is part of the static HTML.
+      // We can add it dynamically too if needed by removing from static and calling askQuestion() here.
+      // For now, let's assume the first message is static and we only add subsequent ones.
+      // If we wanted the first question also added by script:
+      // window.onload = () => { addMessage('ai', questions[0]); };
+    
+    </script>
+    
