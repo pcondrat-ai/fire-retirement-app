@@ -1,45 +1,61 @@
+<script>
+let onboardingData = {};
 
-    <script>
-// Assuming onboardingData is populated after the 5 questions
-let onboardingData = {}; // Example: { monthlyExpenses: 2000, currentSavings: 100000, monthlySavings: 500 }
+// Allocation profiles with projected real returns (after inflation)
+const allocationProfiles = {
+    "Aggressive": 0.07,   // 100% Equities
+    "Moderate": 0.05,     // 60/40 Split
+    "Conservative": 0.03  // Bonds/Cash heavy
+};
 
 function calculateFIRE() {
-    if (Object.keys(onboardingData).length >= 3) { // Check if enough data collected
-        var chatInterface = document.getElementById('chat-interface');
-        if (chatInterface) chatInterface.style.display = 'none';
-        document.getElementById('dashboard').style.display = 'block';
+    // Collect new variables (defaults provided if missing)
+    const inflation = 0.03; 
+    const taxRate = onboardingData.taxRate || 0.15;
+    const allocation = onboardingData.allocation || "Moderate";
+    const realReturn = allocationProfiles[allocation];
 
-        const annualExpenses = (onboardingData.monthlyExpenses || 0) * 12;
-        const fiTarget = annualExpenses * 25;
-        const realReturn = 0.07;
-        let yearsToRetirement = "N/A";
-        let targetFIDate = "N/A";
+    // Refine Expense Math: Adjusted for Tax
+    // If you need $50k post-tax, you need to withdraw $50k / (1 - taxRate)
+    const monthlyNeeded = onboardingData.monthlyExpenses || 3000;
+    const annualPostTaxSpending = monthlyNeeded * 12;
+    const annualGrossWithdrawal = annualPostTaxSpending / (1 - taxRate);
+    
+    // The FI Target (25x Rule applied to Gross Withdrawal)
+    const fiTarget = annualGrossWithdrawal * 25;
+    
+    let yearsToRetirement = "N/A";
+    let targetFIDate = "N/A";
 
-        if (onboardingData.currentSavings > 0) {
-            yearsToRetirement = Math.log(fiTarget / onboardingData.currentSavings) / Math.log(1 + realReturn);
-            yearsToRetirement = Math.max(0, yearsToRetirement).toFixed(1);
-            const currentYear = new Date().getFullYear();
-            targetFIDate = Math.ceil(currentYear + parseFloat(yearsToRetirement));
-        } else if (onboardingData.monthlySavings > 0) {
-            const yearsToSaveTarget = fiTarget / ((onboardingData.monthlySavings || 0) * 12);
-            yearsToRetirement = yearsToSaveTarget.toFixed(1);
-            const currentYear = new Date().getFullYear();
-            targetFIDate = Math.ceil(currentYear + parseFloat(yearsToRetirement));
-        } else {
-           yearsToRetirement = "∞";
-           targetFIDate = "Never at this rate";
-        }
+    const currentSavings = onboardingData.currentSavings || 0;
+    const monthlySavings = onboardingData.monthlySavings || 0;
 
-        document.getElementById('progress-percentage').innerText = '100%';
-        document.getElementById('progress-bar').style.width = '100%';
-        document.getElementById('fi-target-value').innerText = `$${fiTarget.toLocaleString()}`;
-        document.getElementById('years-to-retirement').innerText = yearsToRetirement;
-        document.getElementById('target-fi-date').innerText = targetFIDate;
+    if (currentSavings > 0 || monthlySavings > 0) {
+        // Solving for Time in the compound interest formula with monthly contributions
+        // FV = PV(1+r)^n + PMT[((1+r)^n - 1) / r]
+        const r = realReturn / 12;
+        const pmt = monthlySavings;
+        const pv = currentSavings;
+        
+        // Logarithmic approximation for years to reach target
+        const nMonths = Math.log((fiTarget * r + pmt) / (pv * r + pmt)) / Math.log(1 + r);
+        yearsToRetirement = (nMonths / 12).toFixed(1);
+        
+        const currentYear = new Date().getFullYear();
+        targetFIDate = Math.ceil(currentYear + parseFloat(yearsToRetirement));
     }
+
+    // Update Dashboard UI
+    document.getElementById('chat-interface').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    
+    document.getElementById('fi-target-value').innerText = `$${Math.round(fiTarget).toLocaleString()}`;
+    document.getElementById('years-to-retirement').innerText = yearsToRetirement;
+    document.getElementById('target-fi-date').innerText = targetFIDate;
+    
+    // Display the strategy used
+    document.getElementById('strategy-label').innerText = `${allocation} (${(realReturn * 100).toFixed(0)}% real return)`;
 }
-// In a real app, this would be triggered by an event after the 5th question.
-// You would collect data into onboardingData and then call calculateFIRE();
-// e.g., onboardingData = { monthlyExpenses: 3000, currentSavings: 50000, monthlySavings: 1000 }; calculateFIRE();
 </script>
     
     <div id="dashboard" class="hidden p-6 bg-gray-900 text-white min-h-screen">
@@ -65,7 +81,11 @@ function calculateFIRE() {
                 <p id="target-fi-date" class="text-4xl font-bold">----</p>
             </div>
         </div>
-    
+        
+    <div class="bg-gray-800 p-6 rounded-lg shadow-lg text-center">
+    <h3 class="text-xl font-semibold mb-3 text-teal-400">Selected Strategy</h3>
+    <p id="strategy-label" class="text-xl font-medium text-white">Moderate (5% real return)</p>
+</div>
         <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
             <h3 class="text-xl font-semibold mb-4 text-center text-teal-400">Projected Wealth Growth</h3>
             <div id="wealth-chart-placeholder" class="bg-gray-700 h-64 rounded flex items-center justify-center">
